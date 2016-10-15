@@ -4,8 +4,8 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file",
         "This file is @generated automatically"
     ],
-    "hash": "99b73e0da8da1ec147834799a27aef21",
-    "content-hash": "c64161f01e75a43c8b36554c10ddc0fb",
+    "hash": "761b2e06c51f0ff71469c91d43788997",
+    "content-hash": "89d80b659501957fd338270f50906e2a",
     "packages": [
         {
             "name": "deuzu/request-collector-bundle",
