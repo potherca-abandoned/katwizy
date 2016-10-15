@@ -1,8 +1,21 @@
 {
     "name": "potherca/katwizy",
-    "description": "",
+    "description": "A cleaner Symfony install for light-weight projects.",
+    "keywords": ["symfony", "install", "installer", "lightweight", "micro"],
+    "homepage": "https://github.com/Potherca/Katwizy/",
     "type": "library",
     "license": "GPL-3.0+",
+    "authors": [
+        {
+            "name": "Ben Peachey",
+            "email": "potherca@gmail.com",
+            "homepage": "https://pother.ca"
+        }
+    ],
+    "support": {
+        "issues": "https://github.com/Potherca/Katwizy/issues",
+        "source": "https://github.com/Potherca/Katwizy/"
+    },
     "minimum-stability": "stable",
     "require": {
         "symfony/framework-standard-edition": "^3.1"
@@ -15,11 +28,5 @@
         "psr-4": {
             "Potherca\\Katwizy\\": "src/"
         }
-    },
-    "comment":{
-        "doctrine/doctrine-bundle": "^1.6",
-        "symfony/psr-http-message-bridge": "^1.0",
-        "zendframework/zend-diactoros": "^1.3"
-
     }
 }
