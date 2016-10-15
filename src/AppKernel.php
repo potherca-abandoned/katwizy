@@ -83,7 +83,7 @@ class AppKernel extends Kernel
 
     final public function configureContainer(ContainerBuilder $containerBuilder, LoaderInterface $loader)
     {
-        // PHP equivalent of config.yml
+        // PHP equivalent of `config.yml`
         $containerBuilder->loadFromExtension('framework', [
             'secret' => 'S0ME_SECRET',
             'templating' => [
@@ -98,7 +98,7 @@ class AppKernel extends Kernel
             $loader->load($this->projectPath.'/config/config.yml');
         }
 
-        // configure WebProfilerBundle only if the bundle is enabled
+        /*/ configure WebProfilerBundle only if the bundle is enabled /*/
         if (isset($this->bundles['WebProfilerBundle'])) {
             $containerBuilder->loadFromExtension('web_profiler', array(
                 'toolbar' => true,
@@ -120,11 +120,6 @@ class AppKernel extends Kernel
             $routes->import('@WebProfilerBundle/Resources/config/routing/wdt.xml', '/_wdt');
             $routes->import('@WebProfilerBundle/Resources/config/routing/profiler.xml', '/_profiler');
         }
-
-        // // load example route
-        // if ($this->getEnvironment() == 'dev') {
-        //     $routes->import(__DIR__.'/Controller/ExampleController.php', '/katwizy/', 'annotation');
-        // }
 
         /*/ load the annotation routes /*/
         $routes->import($this->projectPath.'/src/Controller/', '/', 'annotation');
