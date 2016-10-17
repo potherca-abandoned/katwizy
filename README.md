@@ -38,10 +38,10 @@ The absolute minimum that is required to get started is a `web` folder that
 contains an `index.php` file that does the following:
 
 1. Get the Composer Autoloader
-2. Create a Controller
+2. Declare a Controller (including a Route)
 3. Run the bootstrap
 
-Such a file would look like this:
+Such a file could look like this:
 
     // web/index.php
     <?php
@@ -69,7 +69,20 @@ Such a file would look like this:
 
     /*EOF*/
 
-@TODO: Explain more about configuration and getting started
+There are several things that could be done next:
+
+- Declare the Controller in a separate file. All files in the `src` directory
+  are also scanned for Route Annotations
+- Declare routes in a separate file `config/routing.yml`, rather than using
+  annotations.
+- Run katwizy/flotsam to symlink other functionality from the Symfony Standard
+  Edition into the project directory (and add them to the `.gitignore` file).
+- The Symfony `console` command is available from the vendor `bin` directory
+  This is `vendor/bin/` by default (but this can be [configured from `composer.json`])
+
+There are also various other things that can be configured.
+
+    @TODO: Explain more about configuration
 
 ## 🤖 How it works
 
@@ -157,3 +170,4 @@ I don't like my documentation boring and colourless. That's all.
 [Potherca]: https://pother.ca/
 [a keynote by Uncle Bob]: https://www.youtube.com/watch?v=hALFGQNeEnU
 [Silex]: https://silex.sensiolabs.org/
+[configured from `composer.json`]: https://getcomposer.org/doc/06-config.md#bin-dir
