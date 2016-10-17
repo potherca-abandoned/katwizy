@@ -1,7 +1,7 @@
 {
     "name": "potherca/katwizy",
-    "description": "A cleaner Symfony install for light-weight projects.",
-    "keywords": ["symfony", "install", "installer", "lightweight", "micro"],
+    "description": "🌟 A cleaner Symfony install for light-weight projects. 🏁🚗💨",
+    "keywords": ["symfony", "install", "installer", "lightweight", "micro", "potherca"],
     "homepage": "https://github.com/Potherca/Katwizy/",
     "type": "library",
     "license": "GPL-3.0+",
@@ -28,5 +28,6 @@
         "psr-4": {
             "Potherca\\Katwizy\\": "src/"
         }
-    }
+    },
+    "bin": ["bin/console", "bin/flotsam", "bin/symfony_requirements"]
 }
