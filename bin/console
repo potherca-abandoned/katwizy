@@ -1,0 +1,24 @@
+#!/usr/bin/env php
+<?php
+/**
+ * This file meant as a pure proxy for the `console` command from the Symfony Standard Edition
+ *
+ * Because the `bin` folder can be moved by the user, we need to look around to find the composer file.
+ */
+$rootPath = dirname(realpath(dirname($argv[0])));
+$pathParts = explode('/', $rootPath);
+
+if (array_pop($pathParts) === 'vendor') {
+    $vendorPath = $rootPath;
+} elseif (is_dir($rootPath.'/vendor')) {
+    $vendorPath = $rootPath.'/vendor';
+} else {
+    // Give up
+    throw new \Exception ('Could not locate where I am.');
+}
+
+$scriptPath =  $vendorPath.'/symfony/framework-standard-edition/bin/console';
+
+require $scriptPath;
+
+/*EOF*/

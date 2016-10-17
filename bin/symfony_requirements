@@ -1,0 +1,9 @@
+#!/usr/bin/env php
+<?php
+/**
+ * This file is a pure proxy for the `symfony_requirements` command from the Symfony Standard Edition
+ */
+
+require dirname(dirname(dirname(__DIR__))).'/symfony/framework-standard-edition/bin/symfony_requirements';
+
+/*EOF*/

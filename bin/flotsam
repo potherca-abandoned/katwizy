@@ -1,0 +1,31 @@
+#!/usr/bin/env php
+<?php
+/**
+ * This file adds a symlink for needed Symfony files and adds them to .gitignore
+ */
+
+/*
+ * What needs to be symlinked?
+ *
+ * - The entire contents of the `web` directory.
+ *
+ * So what happens if a user want to overwrite a symlinked file?
+ * They would need to go through the following steps:
+ *
+ * 1. Remove the file from the `.gitignore` file
+ * 2. Remove the symlink
+ * 3. Add a file of their own
+ *
+ * As this is a viable option, this needs to be taken into account when symlinking.
+ * So... To be exact... For each file that is symlinked a check needs to be done
+ * to make sure that:
+ * A. No file is present
+ * B. If there is, that it is a symlink
+ * C. The symlink already points to the file that is to be symlinked.
+ *
+ * If it does, nothing needs to happen and if it doesn't, also nothing happens.
+ * So if a file already exists. Skip it? Apparently. But then also skip adding
+ * the file to the gitignore.
+ */
+
+/*EOF*/
