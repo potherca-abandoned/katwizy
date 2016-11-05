@@ -1,10 +1,17 @@
 #!/usr/bin/env php
 <?php
 /**
- * This file meant as a pure proxy for the `console` command from the Symfony Standard Edition
+ * This file is a pure proxy for the `console` command from the Symfony Standard Edition
  *
  * Because the `bin` folder can be moved by the user, we need to look around to find the composer file.
  */
+use Potherca\Katwizy\Bootstrap;
+use Symfony\Bundle\FrameworkBundle\Console\Application;
+use Symfony\Component\Console\Input\ArgvInput;
+use Symfony\Component\Debug\Debug;
+
+set_time_limit(0);
+
 $rootPath = dirname(realpath(dirname($argv[0])));
 $pathParts = explode('/', $rootPath);
 
@@ -17,8 +24,22 @@ if (array_pop($pathParts) === 'vendor') {
     throw new \Exception ('Could not locate where I am.');
 }
 
-$scriptPath =  $vendorPath.'/symfony/framework-standard-edition/bin/console';
+/** @var Composer\Autoload\ClassLoader $loader */
+$loader = require $vendorPath.'/autoload.php';
 
-require $scriptPath;
+$input = new ArgvInput();
+$env = $input->getParameterOption(['--env', '-e'], getenv('SYMFONY_ENV') ?: 'dev');
+$debug = getenv('SYMFONY_DEBUG') !== '0' && !$input->hasParameterOption(['--no-debug', '']) && $env !== 'prod';
+
+if ($debug) {
+    Debug::enable();
+}
+
+$bootstrap = new Bootstrap($loader);
+$bootstrap->load();
+$kernel = $bootstrap->getKernel();
+$application = new Application($kernel);
+$application->run($input);
 
 /*EOF*/
+
