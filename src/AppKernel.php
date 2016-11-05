@@ -13,9 +13,11 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\HttpKernel\Kernel;
 use Symfony\Component\Routing\Exception\ResourceNotFoundException;
 use Symfony\Component\Routing\RouteCollectionBuilder;
+use Symfony\Component\Yaml\Yaml;
 
 /**
  * @FIXME: Various hard-coded values for directories need to be read from a config file!
+ * @TODO: Add arbitrary Twig template loading: $container->get('twig.loader')->addPath('/some/path/with/templates/');
  */
 class AppKernel extends Kernel
 {
@@ -41,36 +43,44 @@ class AppKernel extends Kernel
 
     final public function registerBundles()
     {
-        //@FIXME: Also load (other) packages from the project configuration
         $bundles = [];
 
-        $productionBundles = [
-            \Symfony\Bundle\FrameworkBundle\FrameworkBundle::class,
-            \Symfony\Bundle\SecurityBundle\SecurityBundle::class,
-            \Symfony\Bundle\TwigBundle\TwigBundle::class,
-            \Symfony\Bundle\MonologBundle\MonologBundle::class,
-            \Symfony\Bundle\SwiftmailerBundle\SwiftmailerBundle::class,
-            \Doctrine\Bundle\DoctrineBundle\DoctrineBundle::class,
-            \Sensio\Bundle\FrameworkExtraBundle\SensioFrameworkExtraBundle::class,
-            \AppBundle\AppBundle::class,
+        $bundleConfig = [
+            self::PRODUCTION => [
+                \Symfony\Bundle\FrameworkBundle\FrameworkBundle::class,
+                \Symfony\Bundle\SecurityBundle\SecurityBundle::class,
+                \Symfony\Bundle\TwigBundle\TwigBundle::class,
+                \Symfony\Bundle\MonologBundle\MonologBundle::class,
+                \Symfony\Bundle\SwiftmailerBundle\SwiftmailerBundle::class,
+                \Doctrine\Bundle\DoctrineBundle\DoctrineBundle::class,
+                \Sensio\Bundle\FrameworkExtraBundle\SensioFrameworkExtraBundle::class,
+                \AppBundle\AppBundle::class,
+            ],
+            self::DEVELOPMENT => [
+                \Symfony\Bundle\DebugBundle\DebugBundle::class,
+                \Symfony\Bundle\WebProfilerBundle\WebProfilerBundle::class,
+                \Sensio\Bundle\DistributionBundle\SensioDistributionBundle::class,
+                // \Sensio\Bundle\GeneratorBundle\SensioGeneratorBundle::class,
+            ],
         ];
 
-        $developmentBundles = [
-            \Symfony\Bundle\DebugBundle\DebugBundle::class,
-            \Symfony\Bundle\WebProfilerBundle\WebProfilerBundle::class,
-            \Sensio\Bundle\DistributionBundle\SensioDistributionBundle::class,
-            // \Sensio\Bundle\GeneratorBundle\SensioGeneratorBundle::class,
-        ];
+        /*/ Add bundles from project configuration  /*/
+        if (is_readable($this->getConfigDir().'/bundles.yml')) {
+            $projectBundleConfig = Yaml::parse(
+                file_get_contents($this->getConfigDir().'/bundles.yml')
+            );
+            $bundleConfig = array_merge_recursive($bundleConfig, $projectBundleConfig);
+        }
 
         $loadBundles = function ($bundle) use (&$bundles) {
             $bundles[] = new $bundle;
         };
 
         if (in_array($this->getEnvironment(), ['dev', 'test'], true)) {
-            array_walk($developmentBundles, $loadBundles);
+            array_walk($bundleConfig[self::DEVELOPMENT], $loadBundles);
         }
 
-        array_walk($productionBundles, $loadBundles);
+        array_walk($bundleConfig[self::PRODUCTION], $loadBundles);
 
         return $bundles;
     }
@@ -90,6 +100,11 @@ class AppKernel extends Kernel
         return $this->getVarDir().'/cache';
     }
 
+    private function getConfigDir()
+    {
+        return $this->projectPath.'/config';
+    }
+
     public function getRootDir()
     {
         return $this->projectPath.'/src/';
@@ -98,7 +113,7 @@ class AppKernel extends Kernel
     final public function configureContainer(ContainerBuilder $containerBuilder, LoaderInterface $loader)
     {
         $standardConfigDirectory = $this->projectPath.'/vendor/symfony/framework-standard-edition/app/config';
-        $projectConfigDirectory = $this->projectPath.'/config';
+        $projectConfigDirectory = $this->getConfigDir();
 
         $defaultConfig = [
             'templating' => [
@@ -112,13 +127,6 @@ class AppKernel extends Kernel
                 'save_path'  => $this->getVarDir() . '/sessions',
             ]
         ];
-
-        /*/ Add require parameter if not present in project /*/
-        if (is_readable($projectConfigDirectory.'/config.yml') === false
-            && is_readable($projectConfigDirectory.'/parameters.yml') === false
-        ) {
-            $defaultConfig['secret'] = 'S0ME_SECR3T';// @FIXME: Make the secret a required environment variable!
-        }
 
         // PHP equivalent of `config.yml`
         $containerBuilder->loadFromExtension('framework', $defaultConfig);
@@ -137,6 +145,18 @@ class AppKernel extends Kernel
         /*/ Add project configuration if present /*/
         if (is_readable($projectConfigDirectory.'/config.yml')) {
             $loader->load($projectConfigDirectory.'/config.yml');
+        }
+
+        $settings = $containerBuilder->getExtensionConfig('framework');
+        /* Flatten Array */
+        $settings = iterator_to_array(
+            new \RecursiveIteratorIterator(
+                new \RecursiveArrayIterator($settings)
+            )
+        );
+
+        if (array_key_exists('secret', $settings) === false) {
+            $containerBuilder->loadFromExtension('framework', ['secret' => 'S0ME_SECR3T']);
         }
 
         /*/ configure WebProfilerBundle only if the bundle is enabled /*/
