@@ -14,7 +14,7 @@ class Bootstrap
     /** @var ClassLoader */
     private $loader;
 
-    private function getKernel()
+    final public function getKernel()
     {
         if ($this->kernel === null) {
             $rootDirectory = $this->getRootDirectory();
@@ -48,12 +48,12 @@ class Bootstrap
         Request $request,
         AppKernel $kernel = null
     ) {
-        $bootstap = new static($loader, $kernel);
+        $bootstrap = new static($loader, $kernel);
 
-        $bootstap->load();
+        $bootstrap->load();
         $response = $bootstap->handle($request);
-        $bootstap->send($response);
-        $bootstap->terminate($request, $response);
+        $bootstrap->send($response);
+        $bootstrap->terminate($request, $response);
     }
 
     /**
