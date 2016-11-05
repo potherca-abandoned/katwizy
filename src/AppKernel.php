@@ -60,7 +60,7 @@ class AppKernel extends Kernel
                 \Symfony\Bundle\DebugBundle\DebugBundle::class,
                 \Symfony\Bundle\WebProfilerBundle\WebProfilerBundle::class,
                 \Sensio\Bundle\DistributionBundle\SensioDistributionBundle::class,
-                // \Sensio\Bundle\GeneratorBundle\SensioGeneratorBundle::class,
+                \Sensio\Bundle\GeneratorBundle\SensioGeneratorBundle::class,
             ],
         ];
 
