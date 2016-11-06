@@ -112,7 +112,7 @@ class AppKernel extends Kernel
 
     final public function configureContainer(ContainerBuilder $containerBuilder, LoaderInterface $loader)
     {
-        $standardConfigDirectory = $this->projectPath.'/vendor/symfony/framework-standard-edition/app/config';
+        $deafultConfigDirectory = $this->projectPath.'/vendor/symfony/framework-standard-edition/app/config';
         $projectConfigDirectory = $this->getConfigDir();
 
         $defaultConfig = [
@@ -128,24 +128,30 @@ class AppKernel extends Kernel
             ]
         ];
 
-        // PHP equivalent of `config.yml`
+        /*/ PHP equivalent of `config.yml` /*/
         $containerBuilder->loadFromExtension('framework', $defaultConfig);
 
-        /*/ Add prameters if present /*/
-        if (is_readable($projectConfigDirectory.'/parameters.yml')) {
-            $loader->load($projectConfigDirectory . '/parameters.yml');;
-        }
+        $defaultConfigFiles = [
+            // (?) '/config.yml');
+            '/security.yml',
+            '/services.yml',
+        ];
 
-        $loader->load($standardConfigDirectory . '/security.yml');
+        $projectConfigFiles =[
+            '/config.yml',
+            '/parameters.yml',
+            '/security.yml',
+            '/services.yml',
+        ];
 
-        $loader->load($standardConfigDirectory . '/services.yml');
+        $loadConfigIfExists = function ($file, $key, $directory) use (&$loader) {
+            if (is_readable($directory.$file)) {
+                $loader->load($directory.$file);
+            }
+        };
 
-        // (?) $loader->load($standardConfigDirectory.'/config.yml');
-
-        /*/ Add project configuration if present /*/
-        if (is_readable($projectConfigDirectory.'/config.yml')) {
-            $loader->load($projectConfigDirectory.'/config.yml');
-        }
+        array_walk($defaultConfigFiles, $loadConfigIfExists, $deafultConfigDirectory);
+        array_walk($projectConfigFiles, $loadConfigIfExists, $projectConfigDirectory);
 
         $settings = $containerBuilder->getExtensionConfig('framework');
         /* Flatten Array */
