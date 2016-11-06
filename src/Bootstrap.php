@@ -51,7 +51,7 @@ class Bootstrap
         $bootstrap = new static($loader, $kernel);
 
         $bootstrap->load();
-        $response = $bootstap->handle($request);
+        $response = $bootstrap->handle($request);
         $bootstrap->send($response);
         $bootstrap->terminate($request, $response);
     }
