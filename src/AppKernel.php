@@ -30,6 +30,36 @@ class AppKernel extends Kernel
 
     use MicroKernelTrait;
 
+    final public function getCacheDir()
+    {
+        return $this->getVarDir().'/cache';
+    }
+
+    private function getConfigDir()
+    {
+        return $this->getprojectdir().'/config';
+    }
+
+    final public function getLogDir()
+    {
+        return $this->getVarDir().'/logs';
+    }
+
+    final public function getProjectDir()
+    {
+        return $this->projectPath;
+    }
+
+    final public function getSourceDir()
+    {
+        return $this->getprojectdir().'/src';
+    }
+
+    final public function getVarDir()
+    {
+        return $this->getprojectdir().'/var/'.$this->environment;
+    }
+
     final public function __construct(Directory $projectDirectory, array $options = [])
     {
         $this->projectPath = $projectDirectory->path;
@@ -85,35 +115,9 @@ class AppKernel extends Kernel
         return $bundles;
     }
 
-    final public function getVarDir()
-    {
-        return $this->projectPath.'/var/'.$this->environment;
-    }
-
-    final public function getLogDir()
-    {
-        return $this->getVarDir().'/logs';
-    }
-
-    final public function getCacheDir()
-    {
-        return $this->getVarDir().'/cache';
-    }
-
-    private function getConfigDir()
-    {
-        return $this->projectPath.'/config';
-    }
-
-    public function getRootDir()
-    {
-        return $this->projectPath.'/src/';
-    }
-
     final public function configureContainer(ContainerBuilder $containerBuilder, LoaderInterface $loader)
     {
-        $deafultConfigDirectory = $this->projectPath.'/vendor/symfony/framework-standard-edition/app/config';
-        $projectConfigDirectory = $this->getConfigDir();
+        $environment = $this->getEnvironment();
 
         $defaultConfig = [
             'templating' => [
@@ -128,8 +132,8 @@ class AppKernel extends Kernel
             ]
         ];
 
-        /*/ PHP equivalent of `config.yml` /*/
-        $containerBuilder->loadFromExtension('framework', $defaultConfig);
+        $defaultConfigDirectory = $this->getprojectdir().'/vendor/symfony/framework-standard-edition/app/config';
+        $projectConfigDirectory = $this->getConfigDir();
 
         $defaultConfigFiles = [
             // (?) '/config.yml');
@@ -138,34 +142,37 @@ class AppKernel extends Kernel
         ];
 
         $projectConfigFiles =[
-            '/config.yml',
-            '/parameters.yml',
-            '/security.yml',
-            '/services.yml',
+            '/config.yml' => '/config_'.$environment.'.yml',
+            '/security.yml' => '/security_'.$environment.'.yml',
+            '/services.yml' => '/services_'.$environment.'.yml',
         ];
 
-        $loadConfigIfExists = function ($file, $key, $directory) use (&$loader) {
+        $loadConfigIfExists = function ($file, $alternativeFile, $directory) use (&$loader) {
             if (is_readable($directory.$file)) {
                 $loader->load($directory.$file);
+            } elseif (is_numeric($alternativeFile) === false
+                && is_readable($directory.$alternativeFile)
+            ) {
+                $loader->load($directory.$alternativeFile);
             }
         };
 
-        array_walk($defaultConfigFiles, $loadConfigIfExists, $deafultConfigDirectory);
+        /* Load default configuration */
+        $containerBuilder->loadFromExtension('framework', $defaultConfig);
+        /* Load project parameters file */
+        array_walk(['/parameters.yml' => '/parameters_'.$environment.'.yml'], $loadConfigIfExists, $defaultConfigDirectory);
+        /* Load default configuration files */
+        array_walk($defaultConfigFiles, $loadConfigIfExists, $defaultConfigDirectory);
+        /* Load project configuration files */
         array_walk($projectConfigFiles, $loadConfigIfExists, $projectConfigDirectory);
 
-        $settings = $containerBuilder->getExtensionConfig('framework');
-        /* Flatten Array */
-        $settings = iterator_to_array(
-            new \RecursiveIteratorIterator(
-                new \RecursiveArrayIterator($settings)
-            )
-        );
-
-        if (array_key_exists('secret', $settings) === false) {
+        /*/ Make sure required configuration is set /*/
+        $configuration = $this->loadedConfigurations($containerBuilder, 'framework');
+        if (array_key_exists('secret', $configuration) === false) {
             $containerBuilder->loadFromExtension('framework', ['secret' => 'S0ME_SECR3T']);
         }
 
-        /*/ configure WebProfilerBundle only if the bundle is enabled /*/
+        /*/ configure WebProfilerBundle if it is enabled /*/
         if (isset($this->bundles['WebProfilerBundle'])) {
             $containerBuilder->loadFromExtension('web_profiler', array(
                 'toolbar' => true,
@@ -187,19 +194,38 @@ class AppKernel extends Kernel
         }
 
         /*/ load routes from source annotations /*/
-        if (is_dir($this->projectPath.'/src/')) {
-            $routes->import($this->projectPath.'/src/', '/', 'annotation');
+        if (is_dir($this->getSourceDir())) {
+            $routes->import($this->getSourceDir(), '/', 'annotation');
         }
 
         /*/ load routes from web annotations /*/
-        if (is_dir($this->projectPath.'/web/')) {
-            $routes->import($this->projectPath.'/web/', '/', 'annotation');
+        if (is_dir($this->getprojectdir().'/web/')) {
+            //@FIXME: Web root may not be `web` but `www`, `public` or heavens knows what.
+            $routes->import($this->getprojectdir().'/web/', '/', 'annotation');
         }
 
-        /*/ load routes from configurayion file /*/
-        if (is_readable($this->projectPath.'/config/routing.yml')) {
-            $routes->import($this->projectPath.'/config/routing.yml');
-        }
+        /*/ load routes from configuration file /*/
+        $loadRoutesIfExists = function ($file, $alternativeFile, $directory) use (&$routes) {
+            if (is_readable($directory.$file)) {
+                $loader->load($directory.$file);
+            } elseif (is_readable($directory.$alternativeFile)) {
+                $loader->load($directory.$alternativeFile);
+            }
+        };
+        array_walk(['/routing.yml' => '/routing'.$environment.'.yml'], $loadRoutesIfExists, $this->getConfigDir());
+
+    }
+
+    private function loadedConfigurations($containerBuilder, $extension)
+    {
+        $configuration = $containerBuilder->getExtensionConfig($extension);
+
+        /* Flatten Array */
+        return iterator_to_array(
+            new \RecursiveIteratorIterator(
+                new \RecursiveArrayIterator($configuration)
+            )
+        );
     }
 }
 
