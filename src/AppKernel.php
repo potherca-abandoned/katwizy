@@ -135,6 +135,9 @@ class AppKernel extends Kernel
         $defaultConfigDirectory = $this->getprojectdir().'/vendor/symfony/framework-standard-edition/app/config';
         $projectConfigDirectory = $this->getConfigDir();
 
+        $parametersFile = [
+            '/parameters.yml' => '/parameters_'.$environment.'.yml'
+        ];
         $defaultConfigFiles = [
             // (?) '/config.yml');
             '/security.yml',
@@ -160,7 +163,7 @@ class AppKernel extends Kernel
         /* Load default configuration */
         $containerBuilder->loadFromExtension('framework', $defaultConfig);
         /* Load project parameters file */
-        array_walk(['/parameters.yml' => '/parameters_'.$environment.'.yml'], $loadConfigIfExists, $defaultConfigDirectory);
+        array_walk($parametersFile, $loadConfigIfExists, $defaultConfigDirectory);
         /* Load default configuration files */
         array_walk($defaultConfigFiles, $loadConfigIfExists, $defaultConfigDirectory);
         /* Load project configuration files */
@@ -207,12 +210,13 @@ class AppKernel extends Kernel
         /*/ load routes from configuration file /*/
         $loadRoutesIfExists = function ($file, $alternativeFile, $directory) use (&$routes) {
             if (is_readable($directory.$file)) {
-                $loader->load($directory.$file);
+                $routes->import($directory.$file);
             } elseif (is_readable($directory.$alternativeFile)) {
-                $loader->load($directory.$alternativeFile);
+                $routes->import($directory.$alternativeFile);
             }
         };
-        array_walk(['/routing.yml' => '/routing'.$environment.'.yml'], $loadRoutesIfExists, $this->getConfigDir());
+        $routingFiles = ['/routing.yml' => '/routing'.$environment.'.yml'];
+        array_walk($routingFiles, $loadRoutesIfExists, $this->getConfigDir());
 
     }
 
