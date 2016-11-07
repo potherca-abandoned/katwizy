@@ -69,6 +69,13 @@ class Bootstrap
     /*/ Autoload annotations /*/
     final public function load()
     {
+        $projectPath = $this->kernel->getProjectDir();
+
+        if (is_readable($projectPath, '/.env')) {
+            $environmentVariables = new Dotenv\Dotenv($projectPath, '.env');
+            $environmentVariables->load();
+        }
+
         return AnnotationRegistry::registerLoader(array($this->getLoader(), 'loadClass'));
     }
 
