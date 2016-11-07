@@ -4,6 +4,7 @@ namespace Potherca\Katwizy;
 
 use Composer\Autoload\ClassLoader;
 use Doctrine\Common\Annotations\AnnotationRegistry;
+use Dotenv\Dotenv;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -69,10 +70,10 @@ class Bootstrap
     /*/ Autoload annotations /*/
     final public function load()
     {
-        $projectPath = $this->kernel->getProjectDir();
+        $projectPath = $this->getKernel()->getProjectDir();
 
-        if (is_readable($projectPath, '/.env')) {
-            $environmentVariables = new Dotenv\Dotenv($projectPath, '.env');
+        if (is_readable($projectPath.'/.env')) {
+            $environmentVariables = new Dotenv($projectPath, '.env');
             $environmentVariables->load();
         }
 
