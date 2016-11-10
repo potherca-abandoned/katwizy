@@ -17,7 +17,11 @@ class Bootstrap
     private $loader;
 
     //////////////////////////// SETTERS AND GETTERS \\\\\\\\\\\\\\\\\\\\\\\\\\\
-    /** @return AppKernel */
+    /**
+     * @return AppKernel
+     *
+     * @throws \RuntimeException
+     */
     final public function getKernel()
     {
         if ($this->kernel === null) {
@@ -26,12 +30,20 @@ class Bootstrap
             $environment = AppKernel::DEVELOPMENT;// @TODO: Grab config from the environment
 
             $rootDirectory = $this->getRootDirectory();
+            $varDir = $rootDirectory . '/var/' . $environment;
+            $configDir = $rootDirectory . '/config';
+
+            if (is_dir($configDir) === false) {
+                $configDir = $rootDirectory;
+            }
+
+            $this->ensureDirectoryExists($varDir);
 
             $directories = new Directories(
-                dir($rootDirectory.'/config'),
+                dir($configDir),
                 dir($rootDirectory.'/vendor/symfony/framework-standard-edition/app/config'),
                 dir($rootDirectory),
-                dir($rootDirectory.'/var/'.$environment)
+                dir($varDir)
             );
 
             $configLoader = new ConfigLoader($directories, $environment);
@@ -146,6 +158,33 @@ class Bootstrap
     final public function terminate(Request $request, Response $response)
     {
         return $this->getKernel()->terminate($request, $response);
+    }
+
+    /**
+     * @param string $varDir
+     *
+     * @throws \RuntimeException
+     */
+    private function ensureDirectoryExists($varDir)
+    {
+        if (is_dir($varDir) === false) {
+            if (file_exists($varDir) === true) {
+                throw new \RuntimeException(
+                    sprintf(
+                        'Could not create directory "%s", file already exists at given location.',
+                        $varDir
+                    )
+                );
+            } else {
+                /* @NOTE: Error is suppressed with "@" so an exception can be thrown instead of triggering an error */
+                /** @noinspection NotOptimalIfConditionsInspection *///No use in checking dir before creation
+                if (@mkdir($varDir, 0777, true) === false && is_dir($varDir) === false) {
+                    throw new \RuntimeException(sprintf('Could not create directory "%s"', $varDir));
+                }
+            }
+        } elseif (is_writable($varDir) === false) {
+            throw new \RuntimeException(sprintf('Could not write in directory "%s"', $varDir));
+        }
     }
 }
 
