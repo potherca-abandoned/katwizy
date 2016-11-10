@@ -10,40 +10,66 @@ use Symfony\Component\HttpFoundation\Response;
 
 class Bootstrap
 {
+    ////////////////////////////// CLASS PROPERTIES \\\\\\\\\\\\\\\\\\\\\\\\\\\\
     /** @var AppKernel */
     private $kernel;
     /** @var ClassLoader */
     private $loader;
 
+    //////////////////////////// SETTERS AND GETTERS \\\\\\\\\\\\\\\\\\\\\\\\\\\
+    /** @return AppKernel */
     final public function getKernel()
     {
         if ($this->kernel === null) {
+
+            $debug = true;  // @TODO: Match debug-token from cookie/header/url to config:debugtoken
+            $environment = AppKernel::DEVELOPMENT;// @TODO: Grab config from the environment
+
             $rootDirectory = $this->getRootDirectory();
 
-            $this->kernel = new AppKernel($rootDirectory, [
-                AppKernel::ENVIRONMENT => AppKernel::DEVELOPMENT,// @TODO: Grab config from the environment
-                AppKernel::DEBUG => true // @TODO: Match debugtoken from cookie/header/url to config:debugtoken
-            ]);
+            $directories = new Directories(
+                dir($rootDirectory.'/config'),
+                dir($rootDirectory.'/vendor/symfony/framework-standard-edition/app/config'),
+                dir($rootDirectory),
+                dir($rootDirectory.'/var/'.$environment)
+            );
+
+            $configLoader = new ConfigLoader($directories, $environment);
+
+            $this->kernel = new AppKernel(
+                $configLoader,
+                $environment,
+                $debug
+            );
         }
 
         return $this->kernel;
     }
 
+    /** @return ClassLoader */
     private function getLoader()
     {
         return $this->loader;
     }
 
+    /** @return string */
     private function getRootDirectory()
     {
         $loader = $this->loader;
         $reflector = new \ReflectionObject($loader);
-        // Autoloader at /vendor/composer/ClassLoader.php
-        $rootDirectory = dirname(dirname(dirname($reflector->getFileName())));
 
-        return dir($rootDirectory);
+        /* Autoloader at /vendor/composer/ClassLoader.php */
+        return dirname(dirname(dirname($reflector->getFileName())));
     }
 
+    /**
+     * @param ClassLoader $loader
+     * @param Request $request
+     * @param AppKernel|null $kernel
+     *
+     * @throws \Exception
+     * @throws \InvalidArgumentException
+     */
     final public static function run(
         ClassLoader $loader,
         Request $request,
@@ -57,9 +83,10 @@ class Bootstrap
         $bootstrap->terminate($request, $response);
     }
 
+    //////////////////////////////// PUBLIC API \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
     /**
      * @param ClassLoader $loader
-     * @param Directory $rootDirectory
+     * @param AppKernel|null $kernel
      */
     final public function __construct(ClassLoader $loader, AppKernel $kernel = null)
     {
@@ -67,7 +94,11 @@ class Bootstrap
         $this->kernel = $kernel;
     }
 
-    /*/ Autoload annotations /*/
+    /**
+     * Loads pre-run requisites
+     *
+     * @throws \InvalidArgumentException
+     */
     final public function load()
     {
         $projectPath = $this->getKernel()->getProjectDir();
@@ -77,22 +108,41 @@ class Bootstrap
             $environmentVariables->load();
         }
 
-        return AnnotationRegistry::registerLoader(array($this->getLoader(), 'loadClass'));
+        AnnotationRegistry::registerLoader(array($this->getLoader(), 'loadClass'));
     }
 
-    /*/ Run Framework /*/
+    /**
+     * Proxy for AppKernel::handle()
+     *
+     * @param Request $request
+     *
+     * @return Response
+     *
+     * @throws \Exception
+     */
     final public function handle(Request $request)
     {
         return $this->getKernel()->handle($request);
     }
 
-    /*/ Run Framework /*/
+    /**
+     * Send given response
+     *
+     * @param Response $response
+     *
+     * @return Response
+     */
     final public function send(Response $response)
     {
         return $response->send();
     }
 
-    /*/ Run Framework /*/
+    /**
+     * Proxy for AppKernel::terminate()
+     *
+     * @param Request $request
+     * @param Response $response
+     */
     final public function terminate(Request $request, Response $response)
     {
         return $this->getKernel()->terminate($request, $response);
