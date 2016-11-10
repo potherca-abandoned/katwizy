@@ -119,9 +119,9 @@ nested by wrapping an existing environment variable in `${…}`
 
 For instance:
 
-   BASE_DIR="/var/webroot/project-root"
-   CACHE_DIR="${BASE_DIR}/cache"
-   TMP_DIR="${BASE_DIR}/tmp"
+    BASE_DIR="/var/webroot/project-root"
+    CACHE_DIR="${BASE_DIR}/cache"
+    TMP_DIR="${BASE_DIR}/tmp"
 
 #### Routes
 
