@@ -44,6 +44,12 @@ class AppKernel extends Kernel
     }
 
     /** @return string */
+    final public function getRootDir()
+    {
+        return $this->getSourceDir();
+    }
+
+    /** @return string */
     final public function getSourceDir()
     {
         return $this->getProjectDir().'/src';
