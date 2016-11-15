@@ -18,8 +18,9 @@
     },
     "minimum-stability": "stable",
     "require": {
-        "symfony/framework-standard-edition": "^3.0",
+        "composer/composer": "^1.2",
         "sensio/generator-bundle": "^3.0",
+        "symfony/framework-standard-edition": "^3.0",
         "vlucas/phpdotenv": "^2.4"
      },
     "require-dev": {
