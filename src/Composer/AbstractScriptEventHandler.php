@@ -35,7 +35,7 @@ abstract class AbstractScriptEventHandler
      *
      * @param Event $event
      *
-     * @return array <ImmutableCommand>
+     * @return ImmutableCommand[]
      *
      * @throws \InvalidArgumentException
      *
