@@ -135,6 +135,91 @@ from the Symfony Standard Edition is already loaded by default.
 
 Services can be configured from a `services.yml` file.
 
+### Composer Script Commands
+
+It is not uncommon for the `scripts` section in a `composer.json` file to grow
+quite large. A simple solution is to create a script that holds all of the 
+entries that should be called.
+
+Katwizy provides an abstract base class `AbstractScriptEventHandler` that makes 
+it trivial to add commands to be called from the Composer Scripts.
+
+All that an extending classes has to do is implement the `getCommands` function
+and add the command class to the `script` section in the project's `composer.json` 
+file.
+
+#### Extending the `AbstractScriptEventHandler`
+
+An implementation might look something like this:
+
+    <?php
+    
+    use Composer\Script\ScriptEvents;
+    use Composer\Script\Event;
+    use Potherca\Katwizy\Command\ImmutableCommand;
+    use Potherca\Katwizy\Command\ScriptEventHandler;
+    
+    class ScriptEventHandler extends ScriptEventHandler
+    {
+        /**
+         * Return commands to be run after composer install/update.
+         *
+         * To only call certain scripts on specific events, get the event name (with
+         * `$event->getName()`) and check it against the available events in
+         * Composer\Script\ScriptEvents. The most commonly used events are:
+         *
+         * - ScriptEvents::POST_INSTALL_CMD
+         * - ScriptEvents::POST_UPDATE_CMD
+         *
+         * Command provided by the Symfony `console` command should be marked as
+         * `COMMAND_TYPE_SYMFONY`. These will be handled the same as COMMAND_TYPE_SHELL
+         *
+         * @param Event $event
+         *
+         * @return ImmutableCommand[]
+         *
+         * @throws \InvalidArgumentException
+         */
+        final public function getCommands(Event $event)
+        {
+             $commands = [];
+            
+            if (in_array($event->getName(), [ScriptEvents::POST_UPDATE_CMD, ScriptEvents::POST_INSTALL_CMD])) {
+                $commands[] =  new ImmutableCommand(
+                    ImmutableCommand::COMMAND_TYPE_SYMFONY, 
+                    'assets:install'
+                );
+            }
+            
+            if ($event->getName() === ScriptEvents::POST_UPDATE_CMD) {
+                $commands[] = new ImmutableCommand(
+                    ImmutableCommand::COMMAND_TYPE_PHP, 
+                    'Sensio\\Bundle\\DistributionBundle\\Composer\\ScriptHandler::clearCache'
+                );
+            }
+            
+            return $commands;
+        }
+    }
+    
+    /*EOF*/
+
+#### Adding script to `composer.json`
+
+After the Commad class has been created it can be added to the composer file like this:
+
+
+    {
+        "require": {
+            "…": "…"
+        }
+        "scripts": {
+            "post-install-cmd": "\\ScriptEventHandler::handleEvent",
+            "post-update-cmd": "\\ScriptEventHandler::handleEvent"
+        }
+    }
+
+
 ### More details on configuration
 
 As `routes.yml`, `security.yml` and `services.yml` are loaded separately, there
