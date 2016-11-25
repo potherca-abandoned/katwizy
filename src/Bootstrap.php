@@ -5,57 +5,87 @@ namespace Potherca\Katwizy;
 use Composer\Autoload\ClassLoader;
 use Doctrine\Common\Annotations\AnnotationRegistry;
 use Dotenv\Dotenv;
+use Potherca\Katwizy\Factory\AppKernelFactory;
+use Potherca\Katwizy\Factory\ConfigLoaderFactory;
+use Potherca\Katwizy\Immutable\Debug;
+use Potherca\Katwizy\Immutable\Environment;
+use Symfony\Bundle\FrameworkBundle\Console\Application;
+use Symfony\Component\Console\Input\ArgvInput;
 use Symfony\Component\HttpFoundation\Request;
-use Symfony\Component\HttpFoundation\Response;
 
 class Bootstrap
 {
     ////////////////////////////// CLASS PROPERTIES \\\\\\\\\\\\\\\\\\\\\\\\\\\\
-    /** @var AppKernel */
-    private $kernel;
+    /** @var bool */
+    private $debug;
+    /** @var string */
+    private $environment;
+    /** @var ArgvInput|Request */
+    private $input;
     /** @var ClassLoader */
     private $loader;
 
     //////////////////////////// SETTERS AND GETTERS \\\\\\\\\\\\\\\\\\\\\\\\\\\
     /**
-     * @return AppKernel
-     *
-     * @throws \RuntimeException
+     * @return bool
      */
-    final public function getKernel()
+    private function getDebug()
     {
-        if ($this->kernel === null) {
+        if ($this->debug === null) {
+            $input = $this->input;
 
-            $debug = true;  // @TODO: Match debug-token from cookie/header/url to config:debugtoken
-            $environment = AppKernel::DEVELOPMENT;// @TODO: Grab config from the environment
+            switch (get_class($input)) {
 
-            $rootDirectory = $this->getRootDirectory();
-            $varDir = $rootDirectory . '/var/' . $environment;
-            $configDir = $rootDirectory . '/config';
+                case ArgvInput::class:
+                    $debug = ((int) getenv('SYMFONY_DEBUG') !== '0') && ($input->hasParameterOption(['--no-debug', '']) === false);
+                break;
 
-            if (is_dir($configDir) === false) {
-                $configDir = $rootDirectory;
+
+                case Request::class:
+                    $debug = (bool) ((string) new Debug($input));
+                break;
+
+
+                default:
+                    $debug = false;
+                break;
             }
 
-            $this->ensureDirectoryExists($varDir);
-
-            $directories = new Directories(
-                dir($configDir),
-                dir($rootDirectory.'/vendor/symfony/framework-standard-edition/app/config'),
-                dir($rootDirectory),
-                dir($varDir)
-            );
-
-            $configLoader = new ConfigLoader($directories, $environment);
-
-            $this->kernel = new AppKernel(
-                $configLoader,
-                $environment,
-                $debug
-            );
+            $this->debug = $debug;
         }
 
-        return $this->kernel;
+        return $this->debug;
+    }
+
+    /**
+     * @return string
+     */
+    private function getEnvironment()
+    {
+        if ($this->environment === null) {
+            $input = $this->input;
+
+            switch (get_class($input)) {
+
+                case ArgvInput::class:
+                    $environment = $input->getParameterOption(['--env', '-e'], getenv('SYMFONY_ENV') ?: Environment::DEVELOPMENT);
+                break;
+
+
+                case Request::class:
+                    $environment = (string) new Environment();
+                break;
+
+
+                default:
+                    $environment = Environment::PRODUCTION;
+                break;
+            }
+
+            $this->environment = $environment;
+        }
+
+        return $this->environment;
     }
 
     /** @return ClassLoader */
@@ -67,43 +97,61 @@ class Bootstrap
     /** @return string */
     private function getRootDirectory()
     {
-        $loader = $this->loader;
-        $reflector = new \ReflectionObject($loader);
+        static $rootDirectory;
 
-        /* Autoloader at /vendor/composer/ClassLoader.php */
-        return dirname(dirname(dirname($reflector->getFileName())));
+        if ($rootDirectory === null) {
+            $loader = $this->getLoader();
+
+            $reflector = new \ReflectionObject($loader);
+
+            /* Autoloader at /vendor/composer/ClassLoader.php */
+            $rootDirectory = dirname(dirname(dirname($reflector->getFileName())));
+        }
+
+        return $rootDirectory;
     }
+    //////////////////////////////// PUBLIC API \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+    final public static function run(ClassLoader $loader, $input) {
 
-    /**
-     * @param ClassLoader $loader
-     * @param Request $request
-     * @param AppKernel|null $kernel
-     *
-     * @throws \Exception
-     * @throws \InvalidArgumentException
-     */
-    final public static function run(
-        ClassLoader $loader,
-        Request $request,
-        AppKernel $kernel = null
-    ) {
-        $bootstrap = new static($loader, $kernel);
+        $bootstrap = new static($loader, $input);
 
         $bootstrap->load();
-        $response = $bootstrap->handle($request);
-        $bootstrap->send($response);
-        $bootstrap->terminate($request, $response);
+
+        $input = $bootstrap->input;
+        $kernel = $bootstrap->createKernel();
+
+        switch (get_class($input)) {
+
+            case ArgvInput::class:
+                $bootstrap->handleInput($kernel, $input);
+                break;
+
+
+            case Request::class:
+                $bootstrap->handleRequest($kernel, $input);
+                break;
+
+
+            default:
+                break;
+        }
     }
 
-    //////////////////////////////// PUBLIC API \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
     /**
      * @param ClassLoader $loader
-     * @param AppKernel|null $kernel
+     * @param ArgvInput|Request $input
+     *
+     * @throws \InvalidArgumentException
      */
-    final public function __construct(ClassLoader $loader, AppKernel $kernel = null)
+    final public function __construct(ClassLoader $loader, $input)
     {
         $this->loader = $loader;
-        $this->kernel = $kernel;
+        if ($input instanceof ArgvInput || $input instanceof Request) {
+            $this->input = $input;
+        } else {
+            throw $this->exception($input);
+        }
+
     }
 
     /**
@@ -111,81 +159,93 @@ class Bootstrap
      *
      * @throws \InvalidArgumentException
      */
-    final public function load()
+    private function load()
     {
-        $projectPath = $this->getKernel()->getProjectDir();
-
-        if (is_readable($projectPath.'/.env')) {
-            $environmentVariables = new Dotenv($projectPath, '.env');
-            $environmentVariables->load();
-        }
-
-        AnnotationRegistry::registerLoader(array($this->getLoader(), 'loadClass'));
+        $this->loadEnvFile();
+        $this->registerAnnotationLoader();
+        $this->loadDebug();
     }
 
+    ////////////////////////////// UTILITY METHODS \\\\\\\\\\\\\\\\\\\\\\\\\\\\\
     /**
-     * Proxy for AppKernel::handle()
+     * @return AppKernel
      *
-     * @param Request $request
-     *
-     * @return Response
-     *
-     * @throws \Exception
-     */
-    final public function handle(Request $request)
-    {
-        return $this->getKernel()->handle($request);
-    }
-
-    /**
-     * Send given response
-     *
-     * @param Response $response
-     *
-     * @return Response
-     */
-    final public function send(Response $response)
-    {
-        return $response->send();
-    }
-
-    /**
-     * Proxy for AppKernel::terminate()
-     *
-     * @param Request $request
-     * @param Response $response
-     */
-    final public function terminate(Request $request, Response $response)
-    {
-        return $this->getKernel()->terminate($request, $response);
-    }
-
-    /**
-     * @param string $varDir
-     *
+     * @throws \InvalidArgumentException
+     * @throws \UnexpectedValueException
      * @throws \RuntimeException
      */
-    private function ensureDirectoryExists($varDir)
+    private function createKernel()
     {
-        if (is_dir($varDir) === false) {
-            if (file_exists($varDir) === true) {
-                throw new \RuntimeException(
-                    sprintf(
-                        'Could not create directory "%s", file already exists at given location.',
-                        $varDir
-                    )
-                );
-            } else {
-                /* @NOTE: Error is suppressed with "@" so an exception can be thrown instead of triggering an error */
-                /** @noinspection NotOptimalIfConditionsInspection *///No use in checking dir before creation
-                if (@mkdir($varDir, 0777, true) === false && is_dir($varDir) === false) {
-                    throw new \RuntimeException(sprintf('Could not create directory "%s"', $varDir));
-                }
-            }
-        } elseif (is_writable($varDir) === false) {
-            throw new \RuntimeException(sprintf('Could not write in directory "%s"', $varDir));
+        $debug = $this->getDebug();
+        $environment = $this->getEnvironment();
+        $rootDirectory = $this->getRootDirectory();
+
+        $configLoaderFactory = new ConfigLoaderFactory($rootDirectory, $environment);
+        $configLoader = $configLoaderFactory->create();
+
+        $kernelFactory = new AppKernelFactory($configLoader, $environment, $debug);
+
+        return $kernelFactory->create();
+    }
+
+    /**
+     * @param mixed $input
+     *
+     * @return \InvalidArgumentException
+     */
+    private function exception($input)
+    {
+        $type = gettype($input);
+
+        if ($type === ' object') {
+            $type = get_class($input);
+        }
+
+        $exception = new \InvalidArgumentException(
+            'Given input must be one of "%s", "%s" given',
+            implode('", "', [ArgvInput::class, Request::class]),
+            $type
+        );
+
+        return $exception;
+    }
+
+    private function handleRequest(AppKernel $kernel, Request $input)
+    {
+        $response = $kernel->handle($input);
+        $response = $response->send();
+        $kernel->terminate($input, $response);
+    }
+
+    private function handleInput(AppKernel $kernel, ArgvInput $input)
+    {
+        $application = new Application($kernel);
+
+        return $application->run($input);
+    }
+
+    private function loadEnvFile()
+    {
+        $path = $this->getRootDirectory();
+
+        if (is_readable($path . '/.env')) {
+            $environmentVariables = new Dotenv($path, '.env');
+            $environmentVariables->load();
         }
     }
+
+    private function registerAnnotationLoader()
+    {
+        AnnotationRegistry::registerLoader([$this->getLoader(), 'loadClass']);
+    }
+
+    private function loadDebug()
+    {
+        if ($this->getDebug()) {
+            \Symfony\Component\Debug\Debug::enable();
+        }
+    }
+
 }
 
 /*EOF*/

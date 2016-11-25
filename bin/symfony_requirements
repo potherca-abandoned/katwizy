@@ -4,6 +4,17 @@
  * This file is a pure proxy for the `symfony_requirements` command from the Symfony Standard Edition
  */
 
-require dirname(dirname(dirname(__DIR__))).'/symfony/framework-standard-edition/bin/symfony_requirements';
+$rootPath = dirname(realpath(dirname($argv[0])));
+$pathParts = explode('/', $rootPath);
+
+if (array_pop($pathParts) === 'vendor') {
+    $vendorPath = $rootPath;
+} elseif (is_dir($rootPath.'/vendor')) {
+    $vendorPath = $rootPath.'/vendor';
+} else {
+    throw new \RuntimeException('Could not find "vendor/autoload.php". Has `composer install` been run?');
+}
+
+require $vendorPath.'/symfony/framework-standard-edition/bin/symfony_requirements';
 
 /*EOF*/

@@ -5,10 +5,9 @@
  *
  * Because the `bin` folder can be moved by the user, we need to look around to find the composer file.
  */
-use Potherca\Katwizy\Bootstrap;
-use Symfony\Bundle\FrameworkBundle\Console\Application;
+namespace Potherca\Katwizy;
+
 use Symfony\Component\Console\Input\ArgvInput;
-use Symfony\Component\Debug\Debug;
 
 set_time_limit(0);
 
@@ -20,26 +19,12 @@ if (array_pop($pathParts) === 'vendor') {
 } elseif (is_dir($rootPath.'/vendor')) {
     $vendorPath = $rootPath.'/vendor';
 } else {
-    // Give up
-    throw new \Exception ('Could not locate where I am.');
+    throw new \RuntimeException('Could not find "vendor/autoload.php". Has `composer install` been run?');
 }
 
-/** @var Composer\Autoload\ClassLoader $loader */
+/** @var \Composer\Autoload\ClassLoader $loader */
 $loader = require $vendorPath.'/autoload.php';
 
-$input = new ArgvInput();
-$env = $input->getParameterOption(['--env', '-e'], getenv('SYMFONY_ENV') ?: 'dev');
-$debug = getenv('SYMFONY_DEBUG') !== '0' && !$input->hasParameterOption(['--no-debug', '']) && $env !== 'prod';
-
-if ($debug) {
-    Debug::enable();
-}
-
-$bootstrap = new Bootstrap($loader);
-$bootstrap->load();
-$kernel = $bootstrap->getKernel();
-$application = new Application($kernel);
-$application->run($input);
+Bootstrap::run($loader, new ArgvInput());
 
 /*EOF*/
-

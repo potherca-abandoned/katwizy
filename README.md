@@ -47,8 +47,6 @@ Such a file could look like this:
     // web/index.php
     <?php
 
-    $loader = require dirname(__DIR__).'/vendor/autoload.php';
-
     class Website extends Symfony\Bundle\FrameworkBundle\Controller\Controller
     {
         /**
@@ -63,11 +61,13 @@ Such a file could look like this:
         }
     }
 
-    Potherca\Katwizy\Bootstrap::run(
-        $loader,
-        Symfony\Component\HttpFoundation\Request::createFromGlobals()
+    $loader = require dirname(__DIR__).'/vendor/autoload.php';
+    
+    new Potherca\Katwizy\Bootstrap::run(
+    $loader, 
+    Symfony\Component\HttpFoundation\Request::createFromGlobals()
     );
-
+    
     /*EOF*/
 
 There is [a separate repository with this example](https://github.com/Katwizy/example-minimum)
@@ -214,10 +214,14 @@ After the Commad class has been created it can be added to the composer file lik
             "…": "…"
         }
         "scripts": {
-            "post-install-cmd": "\\ScriptEventHandler::handleEvent",
-            "post-update-cmd": "\\ScriptEventHandler::handleEvent"
+            "symfony-scripts": ["\\ScriptEventHandler::handleEvent"],
+            "post-install-cmd": ["@symfony-scripts"],
+            "post-update-cmd": ["@symfony-scripts"]
         }
     }
+
+
+
 
 
 ### More details on configuration
@@ -244,6 +248,29 @@ file will default to the generic config file.
   directory (and add them to the `.gitignore` file).
 
 
+### Debugging
+
+By default, Symfony contains two separate files for web access: `app.php` for 
+production and `app_dev.php` for development. When accessing the first, debugging 
+mode is disabled, when accessing the latter, debugging mode is enabled. Besides 
+being the cause of various inconveniences, this causes a problem if/when a 
+developer would like to debug things in production.
+
+Although there is an environment variable `SYMFONY_DEBUG`, this is only honored
+by Symfony's configuration files, not the `app(_dev).php` files.
+
+With Katwizy, the environment variable `SYMFONY_DEBUG` _is_ honoured by the 
+`index.php`.<sup>3</sup>
+
+Besides this, debugging mode can be trigger by setting an environment variable 
+named `DEBUG_TOKEN` and referencing this from a requests GET or POST `debug-token` 
+variable, from a Cookie's `debug-token` value or from a `DEBUG-TOKEN` header.
+
+For ease-of-use, when the debugging token is set with a GET, POST or Header, it
+will automatically be set as a Cookie value.
+
+<sup>3</sup> It is also honored by the `console` command. 
+
 ## 🤖 How it works
 
 Katwizy implements a custom Kernel which changes where Symfony looks for things.
@@ -265,7 +292,7 @@ Created by [Potherca]
 
 The Symfony manual offers various ways to get started with a new project.
 
-They all (more or less) lead to a script that dumps a bunch<sup>3</sup> of files
+They all (more or less) lead to a script that dumps a bunch<sup>4</sup> of files
 in a directory of your choice.
 
 The manual then tells you to just go ahead and commit all that mess into git.
@@ -276,14 +303,14 @@ A large part of these files will never be edited, leaving your repository strewn
 with files that have "Initial commit" as message. Forever.
 
 As a final insult, the created `composer.json` file is full of verbose entries
-that could be a lot shorter if other means were used<sup>4</sup>.
+that could be a lot shorter if other means were used<sup>5</sup>.
 
 There must be a better way.
 
 Katwizy tries to offer this "better way".
 
-<sup>3</sup> To be precis: 38 files in 18 folders.
-<sup>4</sup> Like a composer metapackage, a single file to add composer-scripts
+<sup>4</sup> To be precise: 38 files in 18 folders.
+<sup>5</sup> Like a composer meta-package, a single file to add composer-scripts
 to, a Symfony composer plugin, a config file to link to from the `extra` section.
 
 ### 🤔 About the name
@@ -309,10 +336,10 @@ Midwest 2011 conference that explains the problem this poses in quite some detai
 The most commonly suggested solution to have a "lightweight Symfony" is to use
 [Silex]. There is, however, one problems with that... Silex is _not_ Symfony.
 This means that yet another framework needs to be learned, Bundles will _not_
-work<sup>5</sup> and the problem shifts from one framework-oriented directory
+work<sup>6</sup> and the problem shifts from one framework-oriented directory
 structure to another framework's directory structure. So... no thanks.
 
-<sup>5</sup> And no, not all functionality from bundles are available in Silex
+<sup>6</sup> And no, not all functionality from bundles are available in Silex
 through other means.
 
 ### ❔ Which packages/bundles are installed?
