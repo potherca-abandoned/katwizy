@@ -2,6 +2,7 @@
 
 namespace Potherca\Katwizy;
 
+use Potherca\Katwizy\Immutable\Environment;
 use Symfony\Bundle\FrameworkBundle\Kernel\MicroKernelTrait;
 use Symfony\Component\Config\Loader\LoaderInterface;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
@@ -16,9 +17,6 @@ use Symfony\Component\Routing\RouteCollectionBuilder;
 class AppKernel extends Kernel
 {
     ////////////////////////////// CLASS PROPERTIES \\\\\\\\\\\\\\\\\\\\\\\\\\\\
-    const DEVELOPMENT = 'dev';
-    const PRODUCTION = 'prod';
-
     /** @var ConfigLoader */
     private $configLoader;
 
@@ -69,7 +67,7 @@ class AppKernel extends Kernel
     ) {
         $this->configLoader = $configurationLoader;
 
-        parent::__construct($environment, $debug);
+        parent::__construct((string) $environment, (bool) $debug);
     }
 
     /**
@@ -82,7 +80,7 @@ class AppKernel extends Kernel
 
         /** @noinspection PhpUnnecessaryFullyQualifiedNameInspection */
         $bundleConfig = [
-            self::PRODUCTION => [
+            Environment::PRODUCTION => [
                 \Symfony\Bundle\FrameworkBundle\FrameworkBundle::class,
                 \Symfony\Bundle\SecurityBundle\SecurityBundle::class,
                 \Symfony\Bundle\TwigBundle\TwigBundle::class,
@@ -92,12 +90,14 @@ class AppKernel extends Kernel
                 \Sensio\Bundle\FrameworkExtraBundle\SensioFrameworkExtraBundle::class,
                 \AppBundle\AppBundle::class,
             ],
-            self::DEVELOPMENT => [
-                \Symfony\Bundle\DebugBundle\DebugBundle::class,
-                \Symfony\Bundle\WebProfilerBundle\WebProfilerBundle::class,
+            Environment::DEVELOPMENT => [
                 \Sensio\Bundle\DistributionBundle\SensioDistributionBundle::class,
                 \Sensio\Bundle\GeneratorBundle\SensioGeneratorBundle::class,
             ],
+            Environment::DEBUG => [
+                \Symfony\Bundle\DebugBundle\DebugBundle::class,
+                \Symfony\Bundle\WebProfilerBundle\WebProfilerBundle::class,
+            ]
         ];
 
         $projectBundleConfig = $this->configLoader->loadBundles();
@@ -108,11 +108,15 @@ class AppKernel extends Kernel
             $bundles[] = new $bundle;
         };
 
-        if (in_array($this->getEnvironment(), ['dev', 'test'], true)) {
-            array_walk($bundleConfig[self::DEVELOPMENT], $loadBundles);
+        if ($this->isDebug() === true) {
+            array_walk($bundleConfig[Environment::DEBUG], $loadBundles);
         }
 
-        array_walk($bundleConfig[self::PRODUCTION], $loadBundles);
+        if (in_array($this->getEnvironment(), ['dev', 'test'], true)) {
+            array_walk($bundleConfig[Environment::DEVELOPMENT], $loadBundles);
+        }
+
+        array_walk($bundleConfig[Environment::PRODUCTION], $loadBundles);
 
         return $bundles;
     }
