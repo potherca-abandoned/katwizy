@@ -75,7 +75,7 @@ abstract class AbstractScriptEventHandler
      *
      * @throws \InvalidArgumentException
      */
-    private function executeCommand(Event $event, ImmutableCommand $command)
+    protected function executeCommand(Event $event, ImmutableCommand $command)
     {
         switch ($command->getType()) {
             case $command::COMMAND_TYPE_PHP:
