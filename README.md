@@ -47,6 +47,8 @@ Such a file could look like this:
     // web/index.php
     <?php
 
+    $loader = require dirname(__DIR__).'/vendor/autoload.php';
+
     class Website extends Symfony\Bundle\FrameworkBundle\Controller\Controller
     {
         /**
@@ -61,13 +63,11 @@ Such a file could look like this:
         }
     }
 
-    $loader = require dirname(__DIR__).'/vendor/autoload.php';
-    
-    new Potherca\Katwizy\Bootstrap::run(
-    $loader, 
-    Symfony\Component\HttpFoundation\Request::createFromGlobals()
+    Potherca\Katwizy\Bootstrap::run(
+        $loader,
+        Symfony\Component\HttpFoundation\Request::createFromGlobals()
     );
-    
+
     /*EOF*/
 
 There is [a separate repository with this example](https://github.com/Katwizy/example-minimum)
