@@ -1,8 +1,8 @@
 <?php
 
-namespace Potherca\Katwizy\Command;
+namespace Potherca\Katwizy\Immutable;
 
-class ImmutableCommand
+class Command
 {
     ////////////////////////////// CLASS PROPERTIES \\\\\\\\\\\\\\\\\\\\\\\\\\\\
     /*/ const COMMAND_TYPE_COMPOSER = 'composer';/*/// Not yet implemented

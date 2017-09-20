@@ -6,6 +6,7 @@ use Potherca\Katwizy\Immutable\Environment;
 use Symfony\Bundle\FrameworkBundle\Kernel\MicroKernelTrait;
 use Symfony\Component\Config\Loader\LoaderInterface;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
+use Symfony\Component\Finder\Finder;
 use Symfony\Component\HttpKernel\Kernel;
 use Symfony\Component\Routing\RouteCollectionBuilder;
 
@@ -44,13 +45,16 @@ class AppKernel extends Kernel
     /** @return string */
     final public function getRootDir()
     {
-        return $this->getSourceDir();
-    }
+        $projectDir = $this->getProjectDir();
 
-    /** @return string */
-    final public function getSourceDir()
-    {
-        return $this->getProjectDir().'/src';
+        //@FIXME: Source root may not be `src` but heavens knows what.
+        $rootDir = $projectDir . '/src';
+
+        if (is_dir($rootDir) === false) {
+            $rootDir = $projectDir;
+        }
+
+        return $rootDir;
     }
 
     /** @return string */
@@ -170,9 +174,17 @@ class AppKernel extends Kernel
             $routes->import('@WebProfilerBundle/Resources/config/routing/profiler.xml', '/_profiler');
         }
 
-        /*/ load routes from source annotations /*/
-        if (is_dir($this->getSourceDir())) {
-            $routes->import($this->getSourceDir(), '/', 'annotation');
+        /*/ load routes from source annotations below root directory (to avoid recursing into vendor) /*/
+        if (is_dir($this->getProjectDir()) && $this->getProjectDir() !== $this->getRootDir()) {
+            $routes->import($this->getProjectDir(), '/', 'annotation');
+        }
+
+        /*/ load routes from source annotations from any PHP files in the root directory /*/
+        $finder = new Finder();
+        $finder->in($this->getRootDir())->depth(0)->files()->name('*.php');
+
+        foreach ($finder as $file) {
+            $routes->import($file->getRealPath(), '/', 'annotation');
         }
 
         /*/ load routes from web annotations /*/

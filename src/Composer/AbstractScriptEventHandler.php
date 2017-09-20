@@ -3,7 +3,7 @@
 namespace Potherca\Katwizy\Composer;
 
 use Composer\Script\Event;
-use Potherca\Katwizy\Command\ImmutableCommand;
+use Potherca\Katwizy\Immutable\Command;
 use Symfony\Component\Process\Exception\ProcessFailedException;
 use Symfony\Component\Process\ProcessBuilder;
 
@@ -35,7 +35,7 @@ abstract class AbstractScriptEventHandler
      *
      * @param Event $event
      *
-     * @return ImmutableCommand[]
+     * @return Command[]
      *
      * @throws \InvalidArgumentException
      *
@@ -62,7 +62,7 @@ abstract class AbstractScriptEventHandler
 
         array_walk(
             $commands,
-            function (ImmutableCommand $command) use ($self, $event) {
+            function (Command $command) use ($self, $event) {
                 $self->executeCommand($event, $command);
             }
         );
@@ -71,11 +71,11 @@ abstract class AbstractScriptEventHandler
     ////////////////////////////// UTILITY METHODS \\\\\\\\\\\\\\\\\\\\\\\\\\\\\
     /**
      * @param Event $event
-     * @param ImmutableCommand $command
+     * @param Command $command
      *
      * @throws \InvalidArgumentException
      */
-    protected function executeCommand(Event $event, ImmutableCommand $command)
+    protected function executeCommand(Event $event, Command $command)
     {
         switch ($command->getType()) {
             case $command::COMMAND_TYPE_PHP:
@@ -100,7 +100,7 @@ abstract class AbstractScriptEventHandler
         }
     }
 
-    protected function executeShellCommand(Event $event, ImmutableCommand $command)
+    protected function executeShellCommand(Event $event, Command $command)
     {
         $callable = $command->getCallable();
         $arguments = $command->getArguments();
@@ -122,7 +122,7 @@ abstract class AbstractScriptEventHandler
         $event->getIO()->write($process->getOutput());
     }
 
-    protected function executePhpCommand(Event $event, ImmutableCommand $command)
+    protected function executePhpCommand(Event $event, Command $command)
     {
         $result = null;
 
